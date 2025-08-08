@@ -67,6 +67,9 @@ nova_ordem = [
 ]
 df = df[nova_ordem]
 
+# Ordenar por Registro (data) crescente
+# df = df.sort_values(by="Registro", ascending=True)
+
 # ======================
 # PLANILHA GERAL (df2) — força leitura de CPF/CNPJ como texto
 # ======================
@@ -220,7 +223,10 @@ for _, linha in df.iterrows():
     ato = linha["Ato"]
     ato_cod = linha.get("Ato_cod", "") if "Ato_cod" in linha.index else ""
 
-    story.append(Paragraph(f"MATRÍCULA: {matricula} — ATO: {ato}", title_style))
+
+    # ==== CABEÇALHO DO PDF ====
+    matricula_str = f"{int(matricula):,}".replace(",", ".")
+    story.append(Paragraph(f"MATRÍCULA: {matricula_str}", title_style))
     story.append(Spacer(1, 6))
 
     # ==== BLOCO ESQUERDO (Dados da Transação) ====
@@ -302,10 +308,10 @@ for _, linha in df.iterrows():
     ]))
 
     story.append(tabela_duas_colunas)
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 6))
 
     # ==== TABELA DE ENVOLVIDOS ====
-    story.append(Paragraph("👥 Envolvidos:", subtitle_style))
+    story.append(Paragraph("Envolvidos:", subtitle_style))
 
     # Seleciona apenas as colunas de envolvidos do dados_2 (pode haver várias linhas)
     envolvidos = pd.DataFrame()
