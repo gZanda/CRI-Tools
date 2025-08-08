@@ -3,6 +3,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib import colors
 import pandas as pd
+import numpy as np
 
 # ==== Função de formatação ajustada ====  # ALTERAÇÃO
 def formatar_cpf_cnpj(valor):
@@ -16,6 +17,16 @@ def formatar_cpf_cnpj(valor):
         return f"{valor_limpo[:2]}.{valor_limpo[2:5]}.{valor_limpo[5:8]}/{valor_limpo[8:12]}-{valor_limpo[12:]}"
     else:
         return valor_limpo
+
+# Helper: converte números no formato brasileiro/inglês para float  # ALTERAÇÃO
+def to_numeric_brazilian_series(col):
+    s = col.astype(str).fillna('')
+    # Se tiver vírgula assume formato BR (milhares ponto, decimal vírgula)
+    has_comma = s.str.contains(',', regex=False)
+    s2 = s.copy()
+    s2[has_comma] = s[has_comma].str.replace('.', '', regex=False).str.replace(',', '.', regex=False)
+    s2[~has_comma] = s[~has_comma].str.replace(',', '', regex=False)  # remove possíveis vírgulas soltas
+    return pd.to_numeric(s2, errors='coerce')
 
 # ======================
 # PLANILHA CONSULTA (df)
@@ -120,7 +131,32 @@ colunas_para_remover = [
 df2.drop(columns=colunas_para_remover, inplace=True)
 
 # ======================
-# AJUSTE MATRÍCULA E PROTOCOLO NA PLANILHA 1
+# ALTERAÇÕES DE NORMALIZAÇÃO (IMPORTANTE)
+# ======================
+# 1) Normalizar Matrícula em df2 para o mesmo formato que você fez em df  # ALTERAÇÃO
+if "Matrícula" in df2.columns:
+    df2["Matrícula"] = (
+        df2["Matrícula"].astype(str)
+        .str.extract(r"(\d[\d\.]*)")[0]
+        .str.replace(".", "", regex=False)
+    )
+    df2["Matrícula"] = pd.to_numeric(df2["Matrícula"], errors="coerce").astype("Int64")
+
+# 2) Normalizar datas em df2 para dd/mm/YYYY (para usar como fallback)  # ALTERAÇÃO
+for _col in ["Data Registro", "Data Alienação"]:
+    if _col in df2.columns:
+        df2[_col] = pd.to_datetime(df2[_col], errors="coerce").dt.strftime("%d/%m/%Y")
+
+# 3) Extrair código do Ato (ex: "R.2") em ambas as tabelas para matching robusto  # ALTERAÇÃO
+df["Ato_cod"] = df["Ato"].astype(str).str.extract(r'([A-Za-z]\.\d+)')[0].fillna('').str.strip()
+df2["Ato_cod"] = df2["Ato"].astype(str).str.extract(r'([A-Za-z]\.\d+)')[0].fillna('').str.strip()
+
+# 4) Criar coluna numérica de 'Valor Alienação' em df2 para fallback por valor (tratamento BR/EN)  # ALTERAÇÃO
+if "Valor Alienação" in df2.columns:
+    df2["Valor Alienação_num"] = to_numeric_brazilian_series(df2["Valor Alienação"])
+
+# ======================
+# AJUSTE MATRÍCULA E PROTOCOLO NA PLANILHA 1 (já existente)
 # ======================
 df["Matrícula"] = (
     df["Matrícula"].astype(str)
@@ -144,23 +180,11 @@ for coluna_data in ["Registro", "Data Alienação"]:
         df[coluna_data] = pd.to_datetime(df[coluna_data], errors="coerce").dt.strftime("%d/%m/%Y")
 
 
-
-
-
-
-
-
-
-
-
-
 # ======================
-# ESCREVER NO PDF
+# ESCREVER NO PDF (estilos)
 # ======================
-# ==== ESTILOS ====
 style = getSampleStyleSheet()
 
-# Corpo do texto
 normal_style = ParagraphStyle(
     'Normal',
     parent=style['Normal'],
@@ -169,7 +193,6 @@ normal_style = ParagraphStyle(
     leading=18         # ALTERAÇÃO - espaçamento entre linhas
 )
 
-# Títulos
 subtitle_style = ParagraphStyle(
     'Subtitle',
     parent=style['Heading2'],
@@ -178,7 +201,6 @@ subtitle_style = ParagraphStyle(
     leading=18
 )
 
-# Títulos
 title_style = ParagraphStyle(
     'Title',
     parent=style['Heading1'],
@@ -190,29 +212,81 @@ title_style = ParagraphStyle(
 
 story = []
 
-for matricula in df["Matrícula"].dropna().unique():
-    story.append(Paragraph(f"MATRÍCULA: {matricula}", title_style))
-    story.append(Spacer(1, 6))
+# ======================
+# LAÇO PRINCIPAL: AGORA ITERA LINHA A LINHA (cada linha = 1 ato)  # ALTERAÇÃO
+# ======================
+for _, linha in df.iterrows():
+    matricula = linha["Matrícula"]
+    ato = linha["Ato"]
+    ato_cod = linha.get("Ato_cod", "") if "Ato_cod" in linha.index else ""
 
-    dados_1 = df[df["Matrícula"] == matricula].iloc[0]
+    story.append(Paragraph(f"MATRÍCULA: {matricula} — ATO: {ato}", title_style))
+    story.append(Spacer(1, 6))
 
     # ==== BLOCO ESQUERDO (Dados da Transação) ====
     bloco_esquerdo = []
     bloco_esquerdo.append(Paragraph("Dados da Transação:", subtitle_style))
-    for campo, valor in dados_1.items():
+    for campo, valor in linha.items():
+        # Evita imprimir colunas auxiliares como Ato_cod (opcional)
+        if campo == "Ato_cod":
+            continue
         bloco_esquerdo.append(Paragraph(f"<b>{campo}:</b> {valor if pd.notna(valor) else ''}", normal_style))
+
+    # ==== FILTRO EM DF2: primeiro por Matrícula + Ato_cod (se achar) ====
+    dados_2 = pd.DataFrame()
+    if (pd.notna(matricula)):
+        if ato_cod:
+            # tenta pelo código do ato (ex: "R.2")  # ALTERAÇÃO
+            dados_2 = df2[(df2["Matrícula"] == matricula) & (df2["Ato_cod"] == ato_cod)].copy()
+
+        # fallbacks caso não ache:
+        if dados_2.empty:
+            # 1) tentar por Data Registro (se coluna existir)
+            reg = linha.get("Registro", "")
+            if reg and "Data Registro" in df2.columns:
+                dados_2 = df2[(df2["Matrícula"] == matricula) & (df2["Data Registro"] == reg)].copy()
+
+        if dados_2.empty:
+            # 2) tentar por Data Alienação
+            data_al = linha.get("Data Alienação", "")
+            if data_al and "Data Alienação" in df2.columns:
+                dados_2 = df2[(df2["Matrícula"] == matricula) & (df2["Data Alienação"] == data_al)].copy()
+
+        if dados_2.empty:
+            # 3) tentar por Valor Alienação (numérico), se disponível  # ALTERAÇÃO
+            if "Valor Alienação_num" in df2.columns and "Valor Alienação" in linha.index:
+                try:
+                    v = linha["Valor Alienação"]
+                    # normalizar o valor da linha (mesma lógica)
+                    if pd.isna(v):
+                        vnum = None
+                    else:
+                        vs = str(v)
+                        if ',' in vs:
+                            vs2 = vs.replace('.', '').replace(',', '.')
+                        else:
+                            vs2 = vs.replace(',', '')
+                        vnum = float(vs2)
+                    if vnum is not None:
+                        # garantir que df2 tenha a coluna numérica criada (feito antes)
+                        dados_2 = df2[(df2["Matrícula"] == matricula) & (df2["Valor Alienação_num"].notna()) & (df2["Valor Alienação_num"].round(2) == round(vnum, 2))].copy()
+                except Exception:
+                    pass
+
+        # última tentativa: apenas por matrícula (poderá trazer mais linhas, mas é fallback)  # ALTERAÇÃO
+        if dados_2.empty:
+            dados_2 = df2[df2["Matrícula"] == matricula].copy()
 
     # ==== BLOCO DIREITO (Informações Complementares) ====
     bloco_direito = []
-    dados_2 = df2[df2["Matrícula"] == matricula]
     if not dados_2.empty:
         bloco_direito.append(Paragraph("Informações Complementares:", subtitle_style))
+        # pega a primeira combinação relevante (reserve os duplicados)
         dados_fixos = dados_2[[
             "Localização", "Área", "Endereço Imóvel", "Número",
             "Complemento", "Bairro", "Município", "Inscrição NIRF",
             "Cadastro Fiscal", "Categoria"
         ]].drop_duplicates().iloc[0]
-
         for campo, valor in dados_fixos.items():
             bloco_direito.append(Paragraph(f"<b>{campo}:</b> {valor if pd.notna(valor) else ''}", normal_style))
     else:
@@ -224,7 +298,7 @@ for matricula in df["Matrícula"].dropna().unique():
         colWidths=[260, 260]
     )
     tabela_duas_colunas.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
     ]))
 
     story.append(tabela_duas_colunas)
@@ -232,27 +306,37 @@ for matricula in df["Matrícula"].dropna().unique():
 
     # ==== TABELA DE ENVOLVIDOS ====
     story.append(Paragraph("👥 Envolvidos:", subtitle_style))
-    envolvidos = dados_2[[
-        "CPF/CNPJ Transmitente", "Participação Transmitente",
-        "CPF/CNPJ Adquirente", "Participação Adquirente"
-    ]].copy()
 
-    envolvidos = envolvidos.fillna('')  # 🔹 Remove 'nan' e deixa vazio  # ALTERAÇÃO
+    # Seleciona apenas as colunas de envolvidos do dados_2 (pode haver várias linhas)
+    envolvidos = pd.DataFrame()
+    if not dados_2.empty:
+        envolvidos = dados_2[[
+            "CPF/CNPJ Transmitente", "Participação Transmitente",
+            "CPF/CNPJ Adquirente", "Participação Adquirente"
+        ]].copy()
 
-    envolvidos["CPF/CNPJ Transmitente"] = envolvidos["CPF/CNPJ Transmitente"].apply(formatar_cpf_cnpj)
-    envolvidos["CPF/CNPJ Adquirente"] = envolvidos["CPF/CNPJ Adquirente"].apply(formatar_cpf_cnpj)
+    # garantir vazio em nulos  # ALTERAÇÃO
+    if not envolvidos.empty:
+        envolvidos = envolvidos.fillna('')  # ALTERAÇÃO
 
-    data_table = [list(envolvidos.columns)] + envolvidos.values.tolist()
+        envolvidos["CPF/CNPJ Transmitente"] = envolvidos["CPF/CNPJ Transmitente"].apply(formatar_cpf_cnpj)
+        envolvidos["CPF/CNPJ Adquirente"] = envolvidos["CPF/CNPJ Adquirente"].apply(formatar_cpf_cnpj)
 
-    t = Table(data_table, repeatRows=1)
-    t.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#d3d3d3")),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
-        ('FONTSIZE', (0,0), (-1,-1), 9),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('ALIGN', (1,1), (-1,-1), 'CENTER')
-    ]))
-    story.append(t)
+        data_table = [list(envolvidos.columns)] + envolvidos.values.tolist()
+
+        t = Table(data_table, repeatRows=1)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#d3d3d3")),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+            ('FONTSIZE', (0,0), (-1,-1), 9),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('ALIGN', (1,1), (-1,-1), 'CENTER')
+        ]))
+        story.append(t)
+    else:
+        # Sem envolvidos encontrados — evita tabela somente com cabeçalho
+        story.append(Paragraph("Nenhum envolvido listado.", normal_style))  # ALTERAÇÃO
+
     story.append(PageBreak())
 
 # ==== GERAR PDF ====
