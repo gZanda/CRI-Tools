@@ -5,7 +5,7 @@ from reportlab.lib import colors
 import pandas as pd
 import numpy as np
 
-# ==== Função de formatação ajustada ====  # ALTERAÇÃO
+# === Formatação ===
 def formatar_cpf_cnpj(valor):
     # Garante que valores vazios ou 'nan' sejam tratados como vazio
     if pd.isna(valor) or str(valor).strip().lower() in ('nan', ''):  # ALTERAÇÃO
@@ -18,7 +18,7 @@ def formatar_cpf_cnpj(valor):
     else:
         return valor_limpo
 
-# Helper: converte números no formato brasileiro/inglês para float  # ALTERAÇÃO
+# === Conversão numérica para formato brasileiro ===
 def to_numeric_brazilian_series(col):
     s = col.astype(str).fillna('')
     # Se tiver vírgula assume formato BR (milhares ponto, decimal vírgula)
@@ -67,12 +67,10 @@ nova_ordem = [
 ]
 df = df[nova_ordem]
 
-# Ordenar por Registro (data) crescente
-# df = df.sort_values(by="Registro", ascending=True)
-
 # ======================
-# PLANILHA GERAL (df2) — força leitura de CPF/CNPJ como texto
+# PLANILHA GERAL (df2)
 # ======================
+# Forçar leitura como String
 df2 = pd.read_excel(
     "Geral.xlsx",
     dtype={
@@ -136,6 +134,7 @@ df2.drop(columns=colunas_para_remover, inplace=True)
 # ======================
 # ALTERAÇÕES DE NORMALIZAÇÃO (IMPORTANTE)
 # ======================
+
 # 1) Normalizar Matrícula em df2 para o mesmo formato que você fez em df  # ALTERAÇÃO
 if "Matrícula" in df2.columns:
     df2["Matrícula"] = (
