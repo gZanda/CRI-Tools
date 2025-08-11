@@ -8,12 +8,11 @@ from tkinter import filedialog, messagebox, ttk
 import threading
 import time  # só para simulação
 
-
 # Globals 
 consulta_path = None
 geral_path = None
 
-# === Formatação ===
+# ================================================================================ CONVERSIONS ================================================================================ #
 def formatar_cpf_cnpj(valor):
     # Garante que valores vazios ou 'nan' sejam tratados como vazio
     if pd.isna(valor) or str(valor).strip().lower() in ('nan', ''):  # ALTERAÇÃO
@@ -36,14 +35,13 @@ def to_numeric_brazilian_series(col):
     s2[~has_comma] = s[~has_comma].str.replace(',', '', regex=False)  # remove possíveis vírgulas soltas
     return pd.to_numeric(s2, errors='coerce')
 
+# ================================================================================ READING FROM EXCEL ================================================================================ #
 
 def main(consulta_path, geral_path):
 
     time.sleep(3)
-    
-    # ======================
+
     # PLANILHA CONSULTA (df)
-    # ======================
     df = pd.read_excel(consulta_path)
 
     novos_nomes = [
@@ -80,9 +78,8 @@ def main(consulta_path, geral_path):
     ]
     df = df[nova_ordem]
 
-    # ======================
     # PLANILHA GERAL (df2)
-    # ======================
+
     # Forçar leitura como String
     df2 = pd.read_excel(
         geral_path,
@@ -144,9 +141,7 @@ def main(consulta_path, geral_path):
     ]
     df2.drop(columns=colunas_para_remover, inplace=True)
 
-    # ======================
-    # ALTERAÇÕES DE NORMALIZAÇÃO (IMPORTANTE)
-    # ======================
+    # ================================================================================ DATA FORMATTING ================================================================================ #
 
     # 1) Normalizar Matrícula em df2 para o mesmo formato que você fez em df  # ALTERAÇÃO
     if "Matrícula" in df2.columns:
@@ -194,7 +189,6 @@ def main(consulta_path, geral_path):
         if coluna_data in df.columns:
             df[coluna_data] = pd.to_datetime(df[coluna_data], errors="coerce").dt.strftime("%d/%m/%Y")
 
-
     # Text Styles
     style = getSampleStyleSheet()
 
@@ -222,10 +216,9 @@ def main(consulta_path, geral_path):
         leading=18
     )
 
-
     story = []
 
-    # ================================================================================ PROCESSAMENTO PRINCIPAL ================================================================================ #
+    # ================================================================================ MAIN PROCESSING ================================================================================ #
     for _, linha in df.iterrows():
         matricula = linha["Matrícula"]
         ato = linha["Ato"]
