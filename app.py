@@ -18,8 +18,8 @@ def doi():
 
 # Interface
 janela = tk.Tk()
-janela.title("Selecione sua Ferramenta")
-janela.geometry("600x450")
+janela.title("CRI Tools")
+janela.geometry("300x200")
 
 btn_escolher1 = tk.Button(janela, text="Calcular Vencimento de Contrato", command=calc, font=("Arial", 12))
 btn_escolher1.pack(pady=10)
