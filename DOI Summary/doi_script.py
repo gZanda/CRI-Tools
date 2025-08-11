@@ -12,7 +12,7 @@ import time  # só para simulação
 consulta_path = None
 geral_path = None
 
-# ================================================================================ CONVERSIONS ================================================================================ #
+# ================================================================================ CONVERSIONS and FORMATTING ================================================================================ #
 def formatar_cpf_cnpj(valor):
     # Garante que valores vazios ou 'nan' sejam tratados como vazio
     if pd.isna(valor) or str(valor).strip().lower() in ('nan', ''):  # ALTERAÇÃO
@@ -44,6 +44,7 @@ def main(consulta_path, geral_path):
     # PLANILHA CONSULTA (df)
     df = pd.read_excel(consulta_path)
 
+    # Renomeação de Colunas
     novos_nomes = [
         "Ato",
         "Matrícula",
@@ -61,6 +62,7 @@ def main(consulta_path, geral_path):
     ]
     df.columns = novos_nomes
 
+    # Mudança de Ordem
     nova_ordem = [
         "Ato",
         "Matrícula",
@@ -80,7 +82,7 @@ def main(consulta_path, geral_path):
 
     # PLANILHA GERAL (df2)
 
-    # Forçar leitura como String
+    # Forçar leitura como String (lê tudo com o formato que estiver, mas essas 3 colunas como string)
     df2 = pd.read_excel(
         geral_path,
         dtype={
@@ -90,6 +92,7 @@ def main(consulta_path, geral_path):
         }
     )
 
+    # Renomeação de Colunas
     df2.columns = [
         "Data Registro",
         "Matrícula",
@@ -131,6 +134,7 @@ def main(consulta_path, geral_path):
         "CPF/CNPJ Representante"
     ]
 
+    # Remoção de Colunas Desnecessárias
     colunas_para_remover = [
         "Livro", "Folha", "Situação", "Atribuição DOI",
         "Tipo Transação", "Descrição Transação", "Retificação Ato",
@@ -141,7 +145,7 @@ def main(consulta_path, geral_path):
     ]
     df2.drop(columns=colunas_para_remover, inplace=True)
 
-    # ================================================================================ DATA FORMATTING ================================================================================ #
+    # ================================================================================ ADJUSTING DATA ================================================================================ #
 
     # 1) Normalizar Matrícula em df2 para o mesmo formato que você fez em df  # ALTERAÇÃO
     if "Matrícula" in df2.columns:
