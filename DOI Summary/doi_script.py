@@ -10,6 +10,8 @@ from tkinter import filedialog, messagebox, ttk
 import threading
 from datetime import datetime
 from tkinter import filedialog, messagebox
+import time  # só para simulação
+
 
 # Globals 
 consulta_path = None
@@ -40,6 +42,8 @@ def to_numeric_brazilian_series(col):
 
 
 def main(consulta_path, geral_path):
+
+    time.sleep(3)
     
     # ======================
     # PLANILHA CONSULTA (df)
@@ -385,27 +389,60 @@ def executar():
     if not consulta_path or not geral_path:
         messagebox.showerror("Erro", "Selecione os dois arquivos antes de executar.")
         return
-    main(consulta_path, geral_path)
+    # Limpa área principal e mostra loading
+    limpar_area()
+    tk.Label(frame_principal, text="Processando, aguarde...", font=("Arial", 14)).pack(pady=20)
+    progress = ttk.Progressbar(frame_principal, mode="indeterminate")
+    progress.pack(pady=10, fill="x", padx=40)
+    progress.start(10)
 
-# Interface
+    def rodar():
+        try:
+            main(consulta_path, geral_path)
+            mostrar_sucesso()
+        except Exception as e:
+            messagebox.showerror("Erro", f"Ocorreu um erro: {e}")
+            mostrar_tela_inicial()
+
+    threading.Thread(target=rodar).start()
+
+def mostrar_sucesso():
+    limpar_area()
+    tk.Label(frame_principal, text="Processamento concluído com sucesso!", font=("Arial", 14), fg="green").pack(pady=20)
+    tk.Button(frame_principal, text="Repetir", font=("Arial", 12), command=mostrar_tela_inicial).pack(pady=5)
+    tk.Button(frame_principal, text="Fechar", font=("Arial", 12), command=janela.quit).pack(pady=5)
+
+def limpar_area():
+    for widget in frame_principal.winfo_children():
+        widget.destroy()
+
+def mostrar_tela_inicial():
+    limpar_area()
+    global lbl_consulta, lbl_geral
+    # Botão e label para Consulta
+    btn_consulta = tk.Button(frame_principal, text="Planilha Consulta", command=escolher_consulta, font=("Arial", 12))
+    btn_consulta.pack(pady=5)
+    lbl_consulta = tk.Label(frame_principal, text="Consulta: (nenhum arquivo selecionado)", wraplength=500)
+    lbl_consulta.pack(pady=5)
+
+    # Botão e label para Geral
+    btn_geral = tk.Button(frame_principal, text="Planilha Geral", command=escolher_geral, font=("Arial", 12))
+    btn_geral.pack(pady=5)
+    lbl_geral = tk.Label(frame_principal, text="Geral: (nenhum arquivo selecionado)", wraplength=500)
+    lbl_geral.pack(pady=5)
+
+    # Botão para executar
+    btn_exec = tk.Button(frame_principal, text="Executar Função", command=executar, font=("Arial", 14), bg="green", fg="white")
+    btn_exec.pack(pady=20)
+
+# ======= INTERFACE PRINCIPAL =======
 janela = tk.Tk()
-janela.title("Selecionar Arquivos")
+janela.title("Processador de Arquivos")
 janela.geometry("600x300")
 
-# Botão e label para Consulta
-btn_consulta = tk.Button(janela, text="Selecionar Arquivo Consulta", command=escolher_consulta, font=("Arial", 12))
-btn_consulta.pack(pady=5)
-lbl_consulta = tk.Label(janela, text="Consulta: (nenhum arquivo selecionado)", wraplength=500)
-lbl_consulta.pack(pady=5)
+frame_principal = tk.Frame(janela)
+frame_principal.pack(expand=True, fill="both")
 
-# Botão e label para Geral
-btn_geral = tk.Button(janela, text="Selecionar Arquivo Geral", command=escolher_geral, font=("Arial", 12))
-btn_geral.pack(pady=5)
-lbl_geral = tk.Label(janela, text="Geral: (nenhum arquivo selecionado)", wraplength=500)
-lbl_geral.pack(pady=5)
-
-# Botão para executar
-btn_exec = tk.Button(janela, text="Executar Função", command=executar, font=("Arial", 14), bg="green", fg="white")
-btn_exec.pack(pady=20)
+mostrar_tela_inicial()
 
 janela.mainloop()
