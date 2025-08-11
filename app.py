@@ -4,12 +4,12 @@ import subprocess
 from tkinter import filedialog, messagebox, ttk
 
 def calc():
-    subprocess.run( ["python", "C:/Users/gabriel.goncalves/Desktop/CRI-Tools/calcular_vencimento.py"], check=True)
+    subprocess.run( ["python", "C:/Users/gabriel.goncalves/Desktop/CRI-Tools/Caclcular Vencimento/calcular_vencimento.py"], check=True)
 
 
 # Empty dir
 def empty_dir():
-    subprocess.run(["python", "C:/Users/gabriel.goncalves/Desktop/CRI-Tools/empty_dir.py"], check=True)
+    subprocess.run(["python", "C:/Users/gabriel.goncalves/Desktop/CRI-Tools/Empy Directories/empty_dir.py"], check=True)
 
 # DOI
 def doi():
