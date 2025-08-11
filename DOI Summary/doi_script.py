@@ -3,13 +3,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib import colors
 import pandas as pd
-import numpy as np
-import os
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 import threading
-from datetime import datetime
-from tkinter import filedialog, messagebox
 import time  # só para simulação
 
 
@@ -199,9 +195,7 @@ def main(consulta_path, geral_path):
             df[coluna_data] = pd.to_datetime(df[coluna_data], errors="coerce").dt.strftime("%d/%m/%Y")
 
 
-    # ======================
-    # ESCREVER NO PDF (estilos)
-    # ======================
+    # Text Styles
     style = getSampleStyleSheet()
 
     normal_style = ParagraphStyle(
@@ -231,9 +225,7 @@ def main(consulta_path, geral_path):
 
     story = []
 
-    # ======================
-    # LAÇO PRINCIPAL: AGORA ITERA LINHA A LINHA (cada linha = 1 ato)  # ALTERAÇÃO
-    # ======================
+    # ================================================================================ PROCESSAMENTO PRINCIPAL ================================================================================ #
     for _, linha in df.iterrows():
         matricula = linha["Matrícula"]
         ato = linha["Ato"]
@@ -361,13 +353,23 @@ def main(consulta_path, geral_path):
 
         story.append(PageBreak())
 
-    # ==== GERAR PDF ====
-    pdf_path = "relatorio_por_matricula_organizado.pdf"
-    doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=10, bottomMargin=10)
-    doc.build(story)
-    print(f"✅ PDF gerado: {pdf_path}")
 
-# Interface
+    # Saving PDF
+    pdf_path = filedialog.asksaveasfilename(
+    title="Salvar relatório como",
+    defaultextension=".pdf",
+    filetypes=[("PDF files", "*.pdf")],
+    initialfile="relatório_DOI.pdf"
+)
+    if not pdf_path:
+        messagebox.showwarning("Aviso", "Nenhum caminho de arquivo selecionado. PDF não será salvo.")
+        return
+    else:
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4, rightMargin=20, leftMargin=20, topMargin=10, bottomMargin=10)
+        doc.build(story)
+        print(f"✅ PDF gerado: {pdf_path}")
+
+# ================================================================================ GUI ================================================================================ #
 
 # Funções para escolher arquivos
 def escolher_consulta():
@@ -408,7 +410,7 @@ def executar():
 
 def mostrar_sucesso():
     limpar_area()
-    tk.Label(frame_principal, text="Processamento concluído com sucesso!", font=("Arial", 14), fg="green").pack(pady=20)
+    tk.Label(frame_principal, text="Processamento concluído!", font=("Arial", 14), fg="green").pack(pady=20)
     tk.Button(frame_principal, text="Repetir", font=("Arial", 12), command=mostrar_tela_inicial).pack(pady=5)
     tk.Button(frame_principal, text="Fechar", font=("Arial", 12), command=janela.quit).pack(pady=5)
 
@@ -419,13 +421,13 @@ def limpar_area():
 def mostrar_tela_inicial():
     limpar_area()
     global lbl_consulta, lbl_geral
-    # Botão e label para Consulta
+    # Escolher arquivo de Consuulta
     btn_consulta = tk.Button(frame_principal, text="Planilha Consulta", command=escolher_consulta, font=("Arial", 12))
     btn_consulta.pack(pady=5)
     lbl_consulta = tk.Label(frame_principal, text="Consulta: (nenhum arquivo selecionado)", wraplength=500)
     lbl_consulta.pack(pady=5)
 
-    # Botão e label para Geral
+    # Escolher arquivo Geral
     btn_geral = tk.Button(frame_principal, text="Planilha Geral", command=escolher_geral, font=("Arial", 12))
     btn_geral.pack(pady=5)
     lbl_geral = tk.Label(frame_principal, text="Geral: (nenhum arquivo selecionado)", wraplength=500)
@@ -435,9 +437,9 @@ def mostrar_tela_inicial():
     btn_exec = tk.Button(frame_principal, text="Executar Função", command=executar, font=("Arial", 14), bg="green", fg="white")
     btn_exec.pack(pady=20)
 
-# ======= INTERFACE PRINCIPAL =======
+# Tela Inicial
 janela = tk.Tk()
-janela.title("Processador de Arquivos")
+janela.title("Relatório DOI")
 janela.geometry("600x300")
 
 frame_principal = tk.Frame(janela)
