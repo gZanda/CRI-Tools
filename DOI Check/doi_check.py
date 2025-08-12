@@ -37,6 +37,7 @@ input_busca = wait.until(EC.visibility_of_element_located(
     (By.CSS_SELECTOR, "input[placeholder='Faça sua busca'].form-control.form-control-xs")
 ))
 
+# Insere a matrícula
 matricula = "79.725"
 matricula_extenso = "Matrícula 79.725"
 input_busca.send_keys(matricula)
