@@ -31,11 +31,8 @@ time.sleep(5)  # espera carregar
 body = driver.find_element(By.TAG_NAME, "body")
 body.send_keys(Keys.CONTROL, Keys.ALT, "f")
 
-# Aguarda o modal abrir
-time.sleep(3)
-
 # Agora localiza o input 
-wait = WebDriverWait(driver, 20)
+wait = WebDriverWait(driver, 10)
 input_busca = wait.until(EC.visibility_of_element_located(
     (By.CSS_SELECTOR, "input[placeholder='Faça sua busca'].form-control.form-control-xs")
 ))
@@ -43,12 +40,9 @@ input_busca = wait.until(EC.visibility_of_element_located(
 matricula = "79.725"
 matricula_extenso = "Matrícula 79.725"
 input_busca.send_keys(matricula)
-time.sleep(2)  # espera carregar os resultados
 input_busca.send_keys(Keys.RETURN)  # Pressiona Enter para buscar
 
 # Aguarda carregar os resultados
-time.sleep(2)
-
 wait = WebDriverWait(driver, 10)
 
 # Espera o dropdown aparecer (a div que você indicou)
