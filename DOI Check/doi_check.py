@@ -70,5 +70,14 @@ atos_registrados = wait.until(
 #Click
 atos_registrados.click()
 
+# Clicar no ato específico
+elemento = WebDriverWait(driver, 10).until(
+    EC.element_to_be_clickable((
+        By.XPATH,
+        "//strong[contains(normalize-space(), 'M.0')]"
+    ))
+)
+elemento.click()
+
 input("Pressione Enter para fechar o navegador...")
 driver.quit()
