@@ -6,7 +6,11 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from dotenv import load_dotenv
+import os
 
+# Carrega variáveis de ambiente do arquivo .env
+load_dotenv()
 
 # Configura driver
 service = Service(ChromeDriverManager().install())
@@ -22,7 +26,7 @@ input_usuario.send_keys("gabriel.zanda")
 
 # Preenche a senha
 input_senha = driver.find_element(By.ID, "password")
-input_senha.send_keys("Asgard@12345")  # substitua aqui
+input_senha.send_keys(os.getenv("PASSWORD"))
 
 input_senha.send_keys(Keys.RETURN)
 time.sleep(5)  # espera carregar
@@ -54,6 +58,17 @@ item = dropdown.find_element(By.XPATH, ".//a[contains(., 'Matrícula 79.725')]")
 
 # Clica no item para abrir a matrícula
 item.click()
+
+# Aguarda carregar os resultados
+wait = WebDriverWait(driver, 10)
+
+# Vai para "Atos Registrados"
+atos_registrados = wait.until(
+    EC.element_to_be_clickable((By.XPATH, "//a[@title='Atos Registrados']"))
+)
+
+#Click
+atos_registrados.click()
 
 input("Pressione Enter para fechar o navegador...")
 driver.quit()
