@@ -79,5 +79,19 @@ elemento = WebDriverWait(driver, 10).until(
 )
 elemento.click()
 
+# Pegar dados da Tabela
+
+tabela = WebDriverWait(driver, 10).until(
+    EC.visibility_of_element_located((By.XPATH, "//tbody/tr[2]/td[1]"))
+)
+
+print(tabela.text)
+
+tabela = WebDriverWait(driver, 10).until(
+    EC.visibility_of_element_located((By.XPATH, "//tbody/tr[2]/td[2]"))
+)
+
+print(tabela.text)
+
 input("Pressione Enter para fechar o navegador...")
 driver.quit()
