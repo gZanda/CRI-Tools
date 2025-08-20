@@ -122,7 +122,7 @@ def main(consulta_path, geral_path):
         "CEP",
         "Município",
         "UF",
-        "Inscrição NIRF",
+        "NIRF/Cadastro Imobiliário",
         "Cadastro Fiscal",
         "Valor ITBI",
         "Categoria",
@@ -295,7 +295,7 @@ def main(consulta_path, geral_path):
             # pega a primeira combinação relevante (reserve os duplicados)
             dados_fixos = dados_2[[
                 "Localização", "Área", "Endereço Imóvel", "Número",
-                "Complemento", "Bairro", "Município", "Inscrição NIRF",
+                "Complemento", "Bairro", "Município", "NIRF/Cadastro Imobiliário",
                 "Cadastro Fiscal", "Categoria"
             ]].drop_duplicates().iloc[0]
             for campo, valor in dados_fixos.items():
