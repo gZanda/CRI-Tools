@@ -159,7 +159,7 @@ def main(consulta_path, geral_path):
     # 2) Normalizar datas em df2 para dd/mm/YYYY (para usar como fallback)  # ALTERAÇÃO
     for _col in ["Data Registro", "Data Alienação"]:
         if _col in df2.columns:
-            df2[_col] = pd.to_datetime(df2[_col], errors="coerce").dt.strftime("%d/%m/%Y")
+            df2[_col] = pd.to_datetime(df2[_col], errors="coerce", format="%d/%m/%Y").dt.strftime("%d/%m/%Y")   # Formato da data editado aqui
 
     # 3) Extrair código do Ato (ex: "R.2") em ambas as tabelas para matching robusto  # ALTERAÇÃO
     df["Ato_cod"] = df["Ato"].astype(str).str.extract(r'([A-Za-z]\.\d+)')[0].fillna('').str.strip()
